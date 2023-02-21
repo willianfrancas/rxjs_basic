@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link type="text/css" rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+        media="screen,projection">
+    <script src="https://unpkg.com/@reactivex/rxjs@6.3.3/dist/global/rxjs.umd.js"></script>
+    <title>Stop Request - ReactiveX</title>
+
+    <style>
+        body {
+            background-color: #343939;
+            color: #fff;
+        }
+
+        .container {
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            justify-content: center;
+        }
+
+        #content {
+            align-items: center;
+            display: flex;
+            font-size: 2.5em;
+            height: 8rem;
+            text-align: center;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+        <button id="b1" class="btn red" style="display: none">Stop Request</button>
+        <button id="b2" class="btn">Make Request</button>
+        <div id="content">...</div>
+    </div>
+
+    <script>
+        const { of, ajax: { ajax }, fromEvent, race } = rxjs;
+        const { switchMap, tap, pluck } = rxjs.operators;
+
+        const api = (response, delay) => ajax({
+            url: `http://localhost:3000/response/${JSON.stringify(response)}/delay/${delay}/`
+        });
+
+        const content = document.querySelector('#content');
+        const buttonStopRequest = document.querySelector('#b1');
+        const buttonRequest = document.querySelector('#b2');
+
+        const buttonRequest$ = fromEvent(buttonRequest, 'click');
+        const buttonStopRequest$ = fromEvent(buttonStopRequest, 'click');
+
+        const setContent = text => content.innerHTML = text;
+        const request = api({ data: 'API Response' }, 2000).pipe(
+            pluck('response', 'data'),
+            tap(setContent)
+        );
+
+        const stopRequest = buttonStopRequest$.pipe(
+            tap(() => setContent('Request was cancelled!'))
+        )
+
+        const showElement = bool => bool ? 'display: block' : 'display: none';
+        const requestingToggle = bool => {
+            buttonRequest.style = showElement(!bool);
+            buttonStopRequest.style = showElement(bool);
+        }
+
+        buttonRequest$.pipe(
+            tap(() => {
+                requestingToggle(true);
+                setContent('loading...');
+            }),
+            switchMap(() => race(request, stopRequest)),
+            tap(() => requestingToggle(false)),
+        ).subscribe();
+
+    </script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js">
+    </script>
+</body>
+
+</html>
