@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/@reactivex/rxjs@6.3.3/dist/global/rxjs.umd.js"></script>
+    <title>Auto Complete Reactive</title>
+
+    <style>
+        .content {
+            background: #fcf5ea;
+            border-radius: 5px;
+            border: 2px solid #f8bb5e;
+            box-shadow: #00000029 0 0 20px 1px;
+            max-height: 50%;
+            margin: 0;
+            overflow: auto;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        li {
+            padding: 1rem;
+            cursor: pointer;
+        }
+
+        li:not(:last-of-type) {
+            border-bottom: solid 2px #f7bb5e;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="content">
+        <input type="text" placeholder="Country" />
+        <ul></ul>
+    </div>
+
+    <script>
+        const { fromEvent, ajax: { ajax }, of } = rxjs;
+        const { debounceTime, map, pluck, switchMap, catchError, distinctUntilChanged, startWith } = rxjs.operators;
+
+        const input = fromEvent(document.querySelector('input'), 'input');
+        const ul = document.querySelector('ul');
+
+        const showResult = res => {
+            ul.innerHTML = res.map(e => `<li>${e}</li>`).join('');
+        }
+
+        const searchCountry = term => ajax(`https://restcountries.com/v2/name/${term}`).pipe(
+            pluck('response'),
+            map(response => response.map(e => e.name))
+        )
+
+        input.pipe(
+            debounceTime(600),
+            pluck('target', 'value'),
+            map(e => e.trim()),
+            distinctUntilChanged(),
+            switchMap(term => {
+                if (!term || term.length < 3) return of([]);
+                return searchCountry(term);
+            }),
+            catchError((error, source) => {
+                console.error(error);
+                return source.pipe(
+                    startWith([])
+                );
+            })
+        ).subscribe(showResult);
+    </script>
+</body>
+
+</html>
