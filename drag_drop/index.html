@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="https://unpkg.com/@reactivex/rxjs@6.3.3/dist/global/rxjs.umd.js"></script>
+	<title>Drag & Drop Reactive</title>
+
+	<style>
+		.card {
+			background-color: #922;
+			border: 1px solid #333;
+			position: absolute;
+			box-shadow: #333 1px 1px 25px;
+			cursor: pointer;
+			width: 300px;
+			height: 300px;
+		}
+	</style>
+</head>
+
+<body>
+
+	<div class="card"></div>
+
+	<script>
+		const { fromEvent, merge } = rxjs;
+		const { switchMap, takeUntil, map, delay, filter, tap, skip } = rxjs.operators;
+
+		const card = document.querySelector('.card')
+
+		const mouseDown$ = fromEvent(card, 'mousedown');
+		const mouseUp$ = fromEvent(document, 'mouseup');
+		const mouseMove$ = fromEvent(document, 'mousemove');
+
+		const keyUp$ = fromEvent(document, 'keyup');
+
+		const dragAndDrop$ = mouseDown$.pipe(
+			map(e => ({
+				x: e.clientX,
+				y: e.clientY,
+				target: {
+					x: e.target.offsetLeft,
+					y: e.target.offsetTop,
+				}
+			})),
+			switchMap(start =>
+				merge(
+					mouseMove$.pipe(
+						map(e => ({
+							x: e.clientX - start.x + start.target.x,
+							y: e.clientY - start.y + start.target.y
+						})),
+						takeUntil(mouseUp$)
+					),
+					keyUp$.pipe(
+						filter(e => e.which === 32),
+						tap(key => {
+							document.body.insertBefore(card.cloneNode(true), card);
+						}),
+						skip(1)
+					)
+				)),
+		)
+
+		dragAndDrop$
+			.pipe(
+				delay(100)
+			)
+			.subscribe(drag => {
+				card.style.top = `${drag.y}px`
+				card.style.left = `${drag.x}px`
+			});
+
+		console.log('Hey There!')
+	</script>
+
+</body>
+
+</html>
