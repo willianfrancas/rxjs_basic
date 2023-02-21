@@ -1,6 +1,6 @@
 {
   "name": "rxjs",
-  "type": "module",
+  "type": "commonjs",
   "version": "1.0.0",
   "description": "Learning RxJs",
   "main": "./drag_drop/index.js",
